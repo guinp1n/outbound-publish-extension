@@ -16,32 +16,35 @@
 package com.hivemq.extensions.helloworld;
 
 import com.hivemq.extension.sdk.api.annotations.NotNull;
-import com.hivemq.extension.sdk.api.interceptor.publish.PublishInboundInterceptor;
-import com.hivemq.extension.sdk.api.interceptor.publish.parameter.PublishInboundInput;
-import com.hivemq.extension.sdk.api.interceptor.publish.parameter.PublishInboundOutput;
+import com.hivemq.extension.sdk.api.interceptor.publish.PublishOutboundInterceptor;
+import com.hivemq.extension.sdk.api.interceptor.publish.parameter.PublishOutboundInput;
+import com.hivemq.extension.sdk.api.interceptor.publish.parameter.PublishOutboundOutput;
 import com.hivemq.extension.sdk.api.packets.publish.ModifiablePublishPacket;
+import com.hivemq.extension.sdk.api.packets.publish.PublishPacket;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
 /**
- * This is a very simple {@link PublishInboundInterceptor},
- * it changes the payload of every incoming PUBLISH with the topic 'hello/world' to 'Hello World!'.
+ * This is a very simple {@link PublishOutboundInterceptor},
+ * it logs the target clientId,topic,qos,retained of every outgoing PUBLISH.
  *
- * @author Yannick Weber
- * @since 4.3.1
+ * @author Dasha Samkova
+ * @since 4.39.0
  */
-public class HelloWorldInterceptor implements PublishInboundInterceptor {
-
+public class HelloWorldInterceptor implements PublishOutboundInterceptor {
+    private static final @NotNull Logger log = LoggerFactory.getLogger(HelloWorldInterceptor.class);
     @Override
-    public void onInboundPublish(
-            final @NotNull PublishInboundInput publishInboundInput,
-            final @NotNull PublishInboundOutput publishInboundOutput) {
+    public void onOutboundPublish(
+            final @NotNull PublishOutboundInput publishOutboundInput,
+            final @NotNull PublishOutboundOutput publishOutboundOutput) {
 
-        final ModifiablePublishPacket publishPacket = publishInboundOutput.getPublishPacket();
-        if ("hello/world".equals(publishPacket.getTopic())) {
-            final ByteBuffer payload = ByteBuffer.wrap("Hello World!".getBytes(StandardCharsets.UTF_8));
-            publishPacket.setPayload(payload);
-        }
+        final PublishPacket publishPacket = publishOutboundInput.getPublishPacket();
+        final String topic = publishPacket.getTopic();
+        final Integer qosNumber = publishPacket.getQos().getQosNumber();
+        final String clientId = publishOutboundInput.getClientInformation().getClientId();
+        log.info("Intercepted an outbound publish packet to clientId: {}, topic: {}, qos: {}", clientId, topic, qosNumber);
     }
 }
